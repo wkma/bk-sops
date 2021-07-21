@@ -398,6 +398,13 @@
                 }
                 return item
             })
+            if (this.$route.query.id__in !== '') {
+                for (let index = 0; index < searchForm.length; index++) {
+                    if (searchForm[index].key === 'subprocessUpdateVal') {
+                        searchForm[index].value = '1'
+                    }
+                }
+            }
             const isSearchFormOpen = SEARCH_FORM.some(item => this.$route.query[item.key])
             return {
                 firstLoading: true,
@@ -483,6 +490,7 @@
             this.onSearchInput = tools.debounce(this.searchInputhandler, 500)
             await this.getTemplateList()
             this.firstLoading = false
+            this.isSearchFormOpen = this.$route.query.id__in !== ''
         },
         beforeRouteLeave (to, from, next) {
             // 记录访问过的流程 id
@@ -539,9 +547,9 @@
                         label_ids: label_ids && label_ids.length ? label_ids.join(',') : undefined,
                         subprocess_has_update,
                         has_subprocess,
+                        id__in: this.$route.query.id__in || undefined,
                         order_by: this.ordering || undefined
                     }
-
                     if (queryTime[0] && queryTime[1]) {
                         data['pipeline_template__edit_time__gte'] = moment.tz(queryTime[0], this.timeZone).format('YYYY-MM-DD')
                         data['pipeline_template__edit_time__lte'] = moment.tz(queryTime[1], this.timeZone).add('1', 'd').format('YYYY-MM-DD')

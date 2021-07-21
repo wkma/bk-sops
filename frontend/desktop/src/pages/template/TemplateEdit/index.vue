@@ -187,6 +187,29 @@
                     </div>
                 </div>
             </bk-dialog>
+            <bk-dialog
+                width="560"
+                ext-cls="prompted-update-parent-process-dialog"
+                theme="primary"
+                :value="isParentListDialogShow"
+                :mask-close="false"
+                :show-footer="false"
+                @cancel="isParentListDialogShow = false">
+                <i class="bk-icon icon-check-circle-shape ico"></i>
+                <div class="title">{{ $t('保存成功') }}</div>
+                <p class="tip-text">{{ $t('修改后涉及到子流程节点发生变化') }}, {{ $t('请及时调整配置') }}：</p>
+                <ul class="content-edit-save-template-remind">
+                    <li
+                        v-for="(item, index) in parentProcessList"
+                        :key="index">
+                        <div class="list-tag"></div>
+                        <div class="list-content" @click="handleJumpTemplateList(item.template_id)" :class="{ 'text-color': item.always_use_latest }">{{ item.template_name }}</div>
+                    </li>
+                </ul>
+                <div class="tip">
+                    <div v-if="parentProcessList.length > 5" @click="handleJumpTemplateList(parentProcessList)" class="tip-content">{{ $t('共') }}{{ parentProcessList.length }}{{ $t('个，查看全部') }} >></div>
+                </div>
+            </bk-dialog>
         </div>
     </div>
 </template>
@@ -232,6 +255,8 @@
         props: ['template_id', 'type', 'common', 'entrance'],
         data () {
             return {
+                parentProcessList: [],
+                isParentListDialogShow: false,
                 isShowDialog: false,
                 isSaveLoading: false,
                 isSchemaListChange: false,
@@ -426,6 +451,7 @@
                 'loadProjectBaseInfo',
                 'loadTemplateData',
                 'saveTemplateData',
+                'getParentProcesses',
                 'loadCommonTemplateData',
                 'loadCustomVarCollection',
                 'getLayoutedPipeline',
@@ -470,6 +496,13 @@
                 'loadTaskScheme',
                 'saveTaskSchemList'
             ]),
+            handleJumpTemplateList (ids) {
+                const requestId = Array.isArray(ids) ? ids.map(item => item.template_id).join(',') : ids
+                this.$router.push({
+                    path: this.common ? `/common/home/` : `/template/home/${this.project_id}/`,
+                    query: { id__in: requestId }
+                })
+            },
             /**
              * 加载标准插件列表
              */
@@ -667,11 +700,17 @@
 
                 try {
                     const data = await this.saveTemplateData({ 'templateId': template_id, 'projectId': this.project_id, 'common': this.common })
+                    const parentProcess = await this.getParentProcesses({ 'project_id': this.project_id, 'template_id': template_id, 'common': this.common })
                     this.tplActions = data.auth_actions
-                    this.$bkMessage({
-                        message: i18n.t('保存成功'),
-                        theme: 'success'
-                    })
+                    this.parentProcessList = parentProcess.data
+                    if (parentProcess.data.length !== 0) {
+                        this.isParentListDialogShow = true
+                    } else {
+                        this.$bkMessage({
+                            message: i18n.t('保存成功'),
+                            theme: 'success'
+                        })
+                    }
                     this.isTemplateDataChanged = false
                     // 如果为克隆模式保存模板时需要保存执行方案
                     if (this.type === 'clone' && !this.common) {
@@ -1586,6 +1625,81 @@
                 }
                 .action-wrapper .bk-button {
                     margin-right: 6px;
+                }
+            }
+        }
+    }
+    /deep/ .prompted-update-parent-process-dialog {
+        .bk-dialog-tool {
+            width: 560px;
+            height: 40px;
+        }
+        .bk-dialog-body {
+            padding: 0;
+            margin: 0 32px;
+            .ico {
+                display: block;
+                width: 42px;
+                height: 42px;
+                font-size: 43px;
+                border: 0;
+                background-color: #3fc06d;
+                border-radius: 50%;
+                color: #e5f6ea;
+                margin: 0 auto;
+            }
+            .title {
+                display: block;
+                text-align: center;
+                margin: 20px 0 10px 0;
+                font-size: 20px;
+                height: 32px;
+            }
+            .tip-text {
+                margin: 4px 0;
+            }
+            .content-edit-save-template-remind {
+                width: 496px;
+                height: 154px;
+                opacity: 1;
+                background: #f5f6fa;
+                border-radius: 2px;
+                display: flex;
+                flex-direction: column;
+                li {
+                    height: 24px;
+                    margin: 3px 20px;
+                    .list-tag {
+                        margin: 10px 3px;
+                        display: inline-block;
+                        width: 4px;
+                        height: 4px;
+                        border-radius: 50%;
+                        opacity: 1;
+                        background-color: #3a84ff;
+                    }
+                    .list-content {
+                        cursor: pointer;
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                        white-space: nowrap;
+                        display: inline-block;
+                        width: 424px;
+                        height: 24px;
+                    }
+                    .text-color {
+                        color: #3a84ff;
+                    }
+                }
+            }
+            .tip {
+                color: #3a84ff;
+                text-align: right;
+                height: 40px;
+                font-size: 12px;
+                .tip-content{
+                    line-height: 40px;
+                    cursor: pointer;
                 }
             }
         }
